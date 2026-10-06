@@ -38,7 +38,7 @@ class IndexAwareCircularBuffer<T extends IndexedItem> {
   @pragma('vm:prefer-inline')
   void _adoptChild(int index, T child) {
     final cyclicIndex = _getCyclicIndex(index);
-    _array[cyclicIndex]?._detach();
+    _releaseSlot(cyclicIndex, index);
     _array[cyclicIndex] = child.._attach(this, index);
   }
 
@@ -48,9 +48,19 @@ class IndexAwareCircularBuffer<T extends IndexedItem> {
   void _moveChild(int fromIndex, int toIndex) {
     final fromCyclicIndex = _getCyclicIndex(fromIndex);
     final toCyclicIndex = _getCyclicIndex(toIndex);
-    _array[toCyclicIndex]?._detach();
+    _releaseSlot(toCyclicIndex, toIndex);
     _array[toCyclicIndex] = _array[fromCyclicIndex]?.._move(toIndex);
     _array[fromCyclicIndex] = null;
+  }
+
+  /// Detaches the element in [cyclicIndex] unless it has already been
+  /// re-attached at another index, e.g. by `buffer[i] = buffer[i + 1]`.
+  @pragma('vm:prefer-inline')
+  void _releaseSlot(int cyclicIndex, int index) {
+    final current = _array[cyclicIndex];
+    if (current == null || current._owner != this) return;
+    final offset = current._absoluteIndex! - _absoluteStartIndex - index;
+    if (offset % _array.length == 0) current._detach();
   }
 
   /// Gets the element at the specified [index] in the list.
@@ -224,6 +234,10 @@ class IndexAwareCircularBuffer<T extends IndexedItem> {
   /// instead just adjusts the start index and length.
   void trimStart(int count) {
     if (count > _length) count = _length;
+    for (var i = 0; i < count; i++) {
+      _dropChild(i);
+    }
+    _absoluteStartIndex += count;
     _startIndex += count;
     _startIndex %= _array.length;
     _length -= count;
