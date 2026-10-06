@@ -330,6 +330,43 @@ void main() {
       expect(cl.length, 0);
     });
 
+    test('keeps items attached when shifted by assignment', () {
+      final cl = IndexAwareCircularBuffer<IndexedValue<int>>(4);
+      final items = List.generate(4, IndexedValue.new);
+      cl.pushAll(items);
+
+      cl[0] = cl[1];
+      cl[1] = cl[2];
+      cl[2] = IndexedValue(9);
+
+      expect(items[0].attached, false);
+      expect(items[1].index, 0);
+      expect(items[2].index, 1);
+
+      cl.insert(1, IndexedValue(5));
+
+      expect(items[1].attached, false);
+      expect(items[2].index, 1);
+    });
+
+    test('keeps item indexes after trimming the start', () {
+      final cl = IndexAwareCircularBuffer<IndexedValue<int>>(4);
+      final items = List.generate(4, IndexedValue.new);
+      cl.pushAll(items);
+
+      cl.trimStart(2);
+
+      expect(items[0].attached, false);
+      expect(items[1].attached, false);
+      expect(items[2].index, 0);
+      expect(items[3].index, 1);
+
+      cl[0] = IndexedValue(9);
+
+      expect(items[2].attached, false);
+      expect(items[3].index, 1);
+    });
+
     test('can track index of items', () {
       final cl = IndexAwareCircularBuffer<IndexedValue<int>>(3);
       final item0 = IndexedValue(0);
