@@ -367,6 +367,20 @@ void main() {
       expect(items[3].index, 1);
     });
 
+    test('replaces items after the start has moved', () {
+      final cl = IndexAwareCircularBuffer<IndexedValue<int>>(4);
+      cl.pushAll(List.generate(6, IndexedValue.new));
+
+      final replacement = List.generate(2, (i) => IndexedValue(i + 10));
+      cl.replaceWith(replacement);
+
+      expect(cl.length, 2);
+      expect(cl[0], replacement[0]);
+      expect(cl[1], replacement[1]);
+      expect(replacement[0].index, 0);
+      expect(replacement[1].index, 1);
+    });
+
     test('can track index of items', () {
       final cl = IndexAwareCircularBuffer<IndexedValue<int>>(3);
       final item0 = IndexedValue(0);
